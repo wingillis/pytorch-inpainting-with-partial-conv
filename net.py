@@ -32,7 +32,7 @@ def weights_init(init_type='gaussian'):
 class VGG16FeatureExtractor(nn.Module):
     def __init__(self):
         super().__init__()
-        vgg16 = models.vgg16(pretrained=True)
+        vgg16 = models.vgg16(pretrained=False)
         self.enc_1 = nn.Sequential(*vgg16.features[:5])
         self.enc_2 = nn.Sequential(*vgg16.features[5:10])
         self.enc_3 = nn.Sequential(*vgg16.features[10:17])
@@ -123,7 +123,7 @@ class PCBActiv(nn.Module):
 
 
 class PConvUNet(nn.Module):
-    def __init__(self, layer_size=7, input_channels=3, upsampling_mode='nearest'):
+    def __init__(self, layer_size=8, input_channels=3, upsampling_mode='nearest'):
         super().__init__()
         self.freeze_enc_bn = False
         self.upsampling_mode = upsampling_mode
@@ -174,7 +174,6 @@ class PConvUNet(nn.Module):
             h = F.interpolate(h, scale_factor=2, mode=self.upsampling_mode)
             h_mask = F.interpolate(
                 h_mask, scale_factor=2, mode='nearest')
-
             h = torch.cat([h, h_dict[enc_h_key]], dim=1)
             h_mask = torch.cat([h_mask, h_mask_dict[enc_h_key]], dim=1)
             h, h_mask = getattr(self, dec_l_key)(h, h_mask)

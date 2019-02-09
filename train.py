@@ -12,7 +12,7 @@ from evaluation import evaluate
 from loss import InpaintingLoss
 from net import PConvUNet
 from net import VGG16FeatureExtractor
-from places2 import Places2
+from dataset import Dataset as Places2
 from util.io import load_ckpt
 from util.io import save_ckpt
 
@@ -69,15 +69,15 @@ if not os.path.exists(args.log_dir):
     os.makedirs(args.log_dir)
 writer = SummaryWriter(log_dir=args.log_dir)
 
-size = (args.image_size, args.image_size)
-img_tf = transforms.Compose(
-    [transforms.Resize(size=size), transforms.ToTensor(),
-     transforms.Normalize(mean=opt.MEAN, std=opt.STD)])
-mask_tf = transforms.Compose(
-    [transforms.Resize(size=size), transforms.ToTensor()])
+size = [args.image_size] * 2
+# img_tf = transforms.Compose(
+#     [transforms.Resize(size=size), transforms.ToTensor(),
+#      transforms.Normalize(mean=opt.MEAN, std=opt.STD)])
+# mask_tf = transforms.Compose(
+#     [transforms.Resize(size=size), transforms.ToTensor()])
 
-dataset_train = Places2(args.root, args.mask_root, img_tf, mask_tf, 'train')
-dataset_val = Places2(args.root, args.mask_root, img_tf, mask_tf, 'val')
+dataset_train = Places2(args.root, args.mask_root, size)
+dataset_val = Places2(args.root, args.mask_root, size)
 
 iterator_train = iter(data.DataLoader(
     dataset_train, batch_size=args.batch_size,
