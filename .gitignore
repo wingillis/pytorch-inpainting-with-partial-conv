@@ -3,3 +3,5 @@ logs
 snapshots
 masks
 .idea
+__pycache__
+.vscode
