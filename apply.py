@@ -72,6 +72,7 @@ model.eval()
 
 imtransform = dataset.mouse_transform((256, 256))
 masktransform = dataset.mask_transform((256, 256))
+inversetransform = dataset.inverse_transform((80, 80))
 # TODO: compose difference flows for evaluation and training 
 grayscale = transforms.Grayscale(1)
 toPIL = transforms.ToPILImage()
@@ -83,6 +84,8 @@ with h5py.File(args.root, 'r+') as f:
         _im = imtransform(frames[i])
         _ma = masktransform(frames[i], mask[i])
         res, _ = model(_im.view(1, *_im.size()), _ma.view(1, *_ma.size()))
-        res = _ma * _im + (1 - _ma) * res
-        output += [np.array(grayscale(toPIL(unnormalize(res[0]))))]
+        # res = _ma * _im + (1 - _ma) * res
+        # output += [np.array(grayscale(toPIL(unnormalize(res[0]))))]
+        tmp = inversetransform(res)
+        output += [tmp]
     f.create_dataset('inpaint', data=np.array(output))

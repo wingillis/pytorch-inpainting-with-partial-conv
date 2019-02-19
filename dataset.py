@@ -20,12 +20,29 @@ def mouse_transform(im_shape):
         return im.mul_(2).add_(-1)
 
     return transforms.Compose([
-            transforms.Lambda(scale),
-            transforms.Lambda(toPIL),
-            transforms.Resize(im_shape),
-            transforms.ToTensor(),
-            transforms.Lambda(_normalize),
-            transforms.Lambda(lambda a: a.cuda())
+        transforms.Lambda(scale),
+        transforms.Lambda(toPIL),
+        transforms.Resize(im_shape),
+        transforms.ToTensor(),
+        transforms.Lambda(_normalize),
+        transforms.Lambda(lambda a: a.cuda())
+        ])
+
+
+def inverse_mouse_transform(im_shape):
+    def scale(im):
+        return np.uint16(im / 255 * 100)
+    def fromPIL(im):
+        return np.array(im)
+    def un_normalize(im):
+        return im.add_(1).div_(2)
+    return transforms.Compose([
+        transforms.Lambda(lambda a: a.cpu()),
+        transforms.Lambda(un_normalize),
+        tansforms.ToPILImage(),
+        transforms.Resize(im_shape),
+        transforms.Lambda(fromPIL),
+        transforms.Lambda(scale)
         ])
 
 
@@ -48,13 +65,12 @@ def mask_transform(im_shape):
     
 
 class Dataset(data.Dataset):
-    def __init__(self, data_path, mask_path, image_shape, random_crop=True, return_name=False):
+    def __init__(self, data_path, mask_path, image_shape):
         super(Dataset, self).__init__()
         self.samples = self.find_mouse_images(data_path)
         self.data_path = data_path
         self.mask_files = glob(os.path.join(mask_path, '*.h5'))
         self.image_shape = image_shape
-        self.random_crop = random_crop
         self.return_name = return_name
         self.imtransform = mouse_transform(self.image_shape)
         self.masktransform = mask_transform(self.image_shape)
