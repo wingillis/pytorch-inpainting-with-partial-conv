@@ -12,7 +12,7 @@ from evaluation import evaluate
 from loss import InpaintingLoss
 from net import PConvUNet
 from net import VGG16FeatureExtractor
-from dataset import Dataset as Places2
+from dataset import Dataset
 from util.io import load_ckpt
 from util.io import save_ckpt
 
@@ -41,19 +41,19 @@ class InfiniteSampler(data.sampler.Sampler):
 
 parser = argparse.ArgumentParser()
 # training options
-parser.add_argument('--root', type=str, default='/srv/datasets/Places2')
-parser.add_argument('--mask_root', type=str, default='./masks')
-parser.add_argument('--save_dir', type=str, default='./snapshots/default')
-parser.add_argument('--log_dir', type=str, default='./logs/default')
+parser.add_argument('--root', type=str, default='/n/groups/datta/win')
+parser.add_argument('--mask-root', type=str, default='./masks')
+parser.add_argument('--save-dir', type=str, default='./snapshots/default')
+parser.add_argument('--log-dir', type=str, default='./logs/default')
 parser.add_argument('--lr', type=float, default=2e-4)
-parser.add_argument('--lr_finetune', type=float, default=5e-5)
-parser.add_argument('--max_iter', type=int, default=1000000)
-parser.add_argument('--batch_size', type=int, default=16)
-parser.add_argument('--n_threads', type=int, default=16)
-parser.add_argument('--save_model_interval', type=int, default=50000)
-parser.add_argument('--vis_interval', type=int, default=5000)
-parser.add_argument('--log_interval', type=int, default=10)
-parser.add_argument('--image_size', type=int, default=256)
+parser.add_argument('--lr-finetune', type=float, default=5e-5)
+parser.add_argument('--max-iter', type=int, default=1000000)
+parser.add_argument('--batch-size', type=int, default=16)
+parser.add_argument('--n-threads', type=int, default=16)
+parser.add_argument('--save-model-interval', type=int, default=50000)
+parser.add_argument('--vis-interval', type=int, default=5000)
+parser.add_argument('--log-interval', type=int, default=10)
+parser.add_argument('--image-size', type=int, default=256)
 parser.add_argument('--resume', type=str)
 parser.add_argument('--finetune', action='store_true')
 args = parser.parse_args()
@@ -64,26 +64,23 @@ device = torch.device('cuda')
 if not os.path.exists(args.save_dir):
     os.makedirs('{:s}/images'.format(args.save_dir))
     os.makedirs('{:s}/ckpt'.format(args.save_dir))
-
 if not os.path.exists(args.log_dir):
     os.makedirs(args.log_dir)
 writer = SummaryWriter(log_dir=args.log_dir)
 
+# input image size
 size = [args.image_size] * 2
-# img_tf = transforms.Compose(
-#     [transforms.Resize(size=size), transforms.ToTensor(),
-#      transforms.Normalize(mean=opt.MEAN, std=opt.STD)])
-# mask_tf = transforms.Compose(
-#     [transforms.Resize(size=size), transforms.ToTensor()])
 
-dataset_train = Places2(args.root, args.mask_root, size)
-dataset_val = Places2(args.root, args.mask_root, size)
+dataset_train = Dataset(args.root, args.mask_root, size)
+dataset_val = Dataset(args.root, args.mask_root, size)
 
 iterator_train = iter(data.DataLoader(
     dataset_train, batch_size=args.batch_size,
     sampler=InfiniteSampler(len(dataset_train)),
     num_workers=args.n_threads))
-print(len(dataset_train))
+print('Length of training dataset:', len(dataset_train))
+
+# instantiate model
 model = PConvUNet().to(device)
 
 if args.finetune:
@@ -95,6 +92,7 @@ else:
 start_iter = 0
 optimizer = torch.optim.Adam(
     filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
+
 criterion = InpaintingLoss(VGG16FeatureExtractor()).to(device)
 
 if args.resume:
