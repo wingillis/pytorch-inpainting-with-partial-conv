@@ -50,16 +50,20 @@ parser.add_argument('--lr-finetune', type=float, default=5e-5)
 parser.add_argument('--max-iter', type=int, default=1000000)
 parser.add_argument('--batch-size', type=int, default=16)
 parser.add_argument('--n-threads', type=int, default=16)
-parser.add_argument('--save-model-interval', type=int, default=50000)
-parser.add_argument('--vis-interval', type=int, default=5000)
+parser.add_argument('--save-model-interval', type=int, default=500)
+parser.add_argument('--vis-interval', type=int, default=500)
 parser.add_argument('--log-interval', type=int, default=10)
 parser.add_argument('--image-size', type=int, default=256)
 parser.add_argument('--resume', type=str)
+parser.add_argument('--cuda', action='store_true')
 parser.add_argument('--finetune', action='store_true')
 args = parser.parse_args()
 
 torch.backends.cudnn.benchmark = True
-device = torch.device('cuda')
+if args.cuda:
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 if not os.path.exists(args.save_dir):
     os.makedirs('{:s}/images'.format(args.save_dir))
@@ -71,8 +75,9 @@ writer = SummaryWriter(log_dir=args.log_dir)
 # input image size
 size = [args.image_size] * 2
 
-dataset_train = Dataset(args.root, args.mask_root, size)
-dataset_val = Dataset(args.root, args.mask_root, size)
+# normal mouse data found in root
+dataset_train = Dataset(args.root, args.mask_root, size, cuda=args.cuda)
+dataset_val = Dataset(args.root, args.mask_root, size, cuda=args.cuda)
 
 iterator_train = iter(data.DataLoader(
     dataset_train, batch_size=args.batch_size,
