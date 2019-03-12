@@ -34,12 +34,6 @@ if args.cuda:
 else:
     device = torch.device('cpu')
 
-if not os.path.exists(args.save_dir):
-    os.makedirs('{:s}/images'.format(args.save_dir))
-    os.makedirs('{:s}/ckpt'.format(args.save_dir))
-if not os.path.exists(args.log_dir):
-    os.makedirs(args.log_dir)
-
 model = PConvUNet().to(device)
 
 start_iter = 0
@@ -51,7 +45,6 @@ if args.apply:
         args.apply, [('model', model)], [('optimizer', optimizer)])
     for param_group in optimizer.param_groups:
         param_group['lr'] = 1e-4
-    print('Starting from iter ', start_iter)
 
 model.eval()
 
@@ -59,16 +52,16 @@ imtransform = dataset.mouse_transform((256, 256), training=False, cuda=args.cuda
 masktransform = dataset.mask_transform((256, 256), training=False, cuda=args.cuda)
 inversetransform = dataset.inverse_mouse_transform((80, 80))
 
+
 with h5py.File(args.root, 'r') as f:
-    output = []
     frames = f['frames'][()]
+    output = np.zeros(frames.shape, dtype=np.uint8)
     mask = f['frames_mask'][()]
-    for i in range(f['frames'].shape[0]):
-        _im = imtransform(frames[i])
-        _ma = masktransform(frames[i], mask[i])
-        res, _ = model(_im.view(1, *_im.size()), _ma.view(1, *_ma.size()))
-        # res = _ma * _im + (1 - _ma) * res
-        # output += [np.array(grayscale(toPIL(unnormalize(res[0]))))]
-        tmp = inversetransform(res.squeeze())
-        output += [tmp]
-add_h5_dataset(args.root, 'inpaint', data=np.array(output))
+    total = frames.shape[0] // 8
+    for start, end in tqdm(generate_indices(8, frames.shape[0]), desc='applying model', total=total):
+        _im = torch.stack([imtransform(x) for x in frames[start:end]])
+        _ma = torch.stack([masktransform(x, m) for x, m in zip(frames[start:end], mask[start:end])])
+        res, _ = model(_im, _ma)
+        tmp = [inversetransform(x) for x in res]
+        output[start:end, ...] = np.array(tmp)
+add_h5_dataset(args.root, 'inpaint', data=output)

@@ -83,11 +83,14 @@ def mask_transform(im_shape, training=True, cuda=True):
         xforms += [transforms.Lambda(lambda a: a.cuda())]
     xforms = transforms.Compose(xforms)
 
-    strel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    if training:
+        strel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    else:
+        strel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     
     def run_transform(mouse, mask):
-        mouse = mouse < 20
-        img = (~((mask > -13) | mouse)).astype('uint8')
+        mouse = mouse < 18
+        img = (~((mask > -12.5) | mouse)).astype('uint8')
         img = 1 - cv2.dilate(img, strel, iterations=1)
         return xforms(img)
     return run_transform
